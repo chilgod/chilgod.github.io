@@ -1,7 +1,18 @@
-# Letian Qi Personal Website
+# Lithos
 
-Static personal homepage for GitHub Pages.
+Full-screen dark geology hero for GitHub Pages, built with React 18, TypeScript, Vite, Tailwind CSS, and lucide-react.
 
-## Publish
+## Local Development
 
-Use this repository as a GitHub Pages source from the repository root. A user site can be published from a repository named `chilgod.github.io`; a project site can be published from any repository with Pages enabled.
+```bash
+npm install
+npm run dev
+```
+
+## Build
+
+```bash
+npm run build
+```
+
+GitHub Pages deployment is handled by the workflow in `.github/workflows/deploy.yml`.
