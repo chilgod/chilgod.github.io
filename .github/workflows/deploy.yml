@@ -26,6 +26,21 @@ jobs:
         with:
           node-version: 20
 
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Prefer Actions as Pages source
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          curl -L --fail-with-body -X PUT \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2026-03-10" \
+            "https://api.github.com/repos/${{ github.repository }}/pages" \
+            -d '{"build_type":"workflow"}'
+
       - name: Install dependencies
         run: npm install
 
