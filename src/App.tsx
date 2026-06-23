@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   motion,
   useInView,
@@ -7,7 +7,7 @@ import {
   useTransform,
   type MotionValue
 } from 'framer-motion';
-import { ArrowRight, ArrowUpRight, BookOpen, Github, Mail, Menu } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ArrowUpRight, BookOpen, ExternalLink, FileText, Github, Mail, Menu } from 'lucide-react';
 
 const HERO_VIDEO =
   'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260405_170732_8a9ccda6-5cff-4628-b164-059c500a2b41.mp4';
@@ -38,14 +38,31 @@ type DirectionSpec = {
   status: string;
 };
 
-type PaperTrack = {
+type PaperCategory = {
+  label: string;
+  copy: string;
+  papers: PaperItem[];
+};
+
+type PaperTopic = {
+  slug: string;
   title: string;
   english: string;
+  description: string;
+  status: string;
   accent: string;
-  categories: {
-    label: string;
-    copy: string;
-  }[];
+  image: string;
+  categories: PaperCategory[];
+};
+
+type PaperItem = {
+  title: string;
+  authors: string;
+  meta: string;
+  abstract: string;
+  tags: string[];
+  pdfUrl?: string;
+  noteUrl?: string;
 };
 
 type ProjectLink = {
@@ -54,6 +71,94 @@ type ProjectLink = {
   copy: string;
   href: string;
 };
+
+const PAPER_TOPICS: PaperTopic[] = [
+  {
+    slug: 'molecules',
+    title: '分子结构生成',
+    english: 'Molecular Structure Generation',
+    description: '围绕化学约束、三维构象、性质条件和可合成性整理分子生成论文。',
+    status: '框架已建，论文待补充',
+    accent: 'text-[#9bd1a9]',
+    image: MOLECULE_IMAGE,
+    categories: [
+      { label: 'Foundations', copy: '基础表征、化学约束、构象生成和性质预测相关论文。', papers: [] },
+      { label: 'Methods', copy: '扩散、流、等变网络、条件生成和采样策略。', papers: [] },
+      { label: 'Evaluation', copy: '有效性、唯一性、多样性、稳定性和任务指标。', papers: [] },
+      { label: 'Open Questions', copy: '可合成性、目标条件可靠性、分布外泛化与实验闭环。', papers: [] }
+    ]
+  },
+  {
+    slug: '3d',
+    title: '3D 生成',
+    english: '3D Generative Models',
+    description: '整理三维表示、重建生成混合流程、多视角一致性和文本到 3D 的关键论文。',
+    status: '框架已建，论文待补充',
+    accent: 'text-[#d9b36b]',
+    image: GENERATION_IMAGE,
+    categories: [
+      { label: 'Foundations', copy: '三维表示、多视角几何、重建和生成任务定义。', papers: [] },
+      { label: 'Methods', copy: 'NeRF、Gaussian Splatting、3D diffusion 和文本到 3D。', papers: [] },
+      { label: 'Evaluation', copy: '几何质量、视角一致性、纹理质量、编辑性和效率。', papers: [] },
+      { label: 'Open Questions', copy: '可控性、物理一致性、数据偏差和跨表示迁移。', papers: [] }
+    ]
+  },
+  {
+    slug: 'weights',
+    title: '权重空间生成',
+    english: 'Weight-Space Generation',
+    description: '把 neural network weights 当作生成对象，整理模型 zoo、权重扩散和 checkpoint 生成相关工作。',
+    status: '已接入 1 篇 PDF',
+    accent: 'text-[#c7a4ff]',
+    image: WEIGHT_IMAGE,
+    categories: [
+      { label: 'Foundations', copy: '模型 zoo、权重表征、排列对称性和函数空间关系。', papers: [] },
+      {
+        label: 'Methods',
+        copy: '超网络、权重扩散、checkpoint 生成和模型族插值。',
+        papers: [
+          {
+            title: 'Neural Network Diffusion',
+            authors: 'Kai Wang, Dongwen Tang, Boya Zeng, Yida Yin, Zhaopan Xu, Yukun Zhou, Zelin Zang, Trevor Darrell, Zhuang Liu, Yang You',
+            meta: 'arXiv:2402.13144v3 · 2024',
+            abstract: '用自编码器提取网络参数子集的潜表示，再用扩散模型生成新的潜表示，解码为高性能网络参数。',
+            tags: ['diffusion', 'weights', 'parameter generation'],
+            pdfUrl: '/papers/neural-network-diffusion.pdf'
+          }
+        ]
+      },
+      { label: 'Evaluation', copy: '生成权重可训练性、下游性能、校准和跨架构泛化。', papers: [] },
+      { label: 'Open Questions', copy: '参数空间语义、规模化数据、架构条件和安全边界。', papers: [] }
+    ]
+  }
+];
+
+function countPapers(topic: PaperTopic) {
+  return topic.categories.reduce((total, category) => total + category.papers.length, 0);
+}
+
+function getTopicFromHash(hash: string) {
+  const match = hash.match(/^#topic\/([^/]+)$/);
+  if (!match) return null;
+  return PAPER_TOPICS.find((topic) => topic.slug === match[1]) ?? null;
+}
+
+function useHashRoute() {
+  const [hash, setHash] = useState(() => (typeof window === 'undefined' ? '' : window.location.hash));
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      setHash(window.location.hash);
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, []);
+
+  return hash;
+}
 
 function scrollToCurrentHash() {
   const rawHash = window.location.hash;
@@ -409,41 +514,7 @@ function Directions() {
 }
 
 function Papers() {
-  const paperTracks: PaperTrack[] = [
-    {
-      title: '分子结构生成',
-      english: 'Molecular Structure Generation',
-      accent: 'text-[#9bd1a9]',
-      categories: [
-        { label: 'Foundations', copy: '基础表征、化学约束、构象生成和性质预测相关论文。' },
-        { label: 'Methods', copy: '扩散、流、等变网络、条件生成和采样策略。' },
-        { label: 'Evaluation', copy: '有效性、唯一性、多样性、稳定性和任务指标。' },
-        { label: 'Open Questions', copy: '可合成性、目标条件可靠性、分布外泛化与实验闭环。' }
-      ]
-    },
-    {
-      title: '3D 生成',
-      english: '3D Generative Models',
-      accent: 'text-[#d9b36b]',
-      categories: [
-        { label: 'Foundations', copy: '三维表示、多视角几何、重建和生成任务定义。' },
-        { label: 'Methods', copy: 'NeRF、Gaussian Splatting、3D diffusion 和文本到 3D。' },
-        { label: 'Evaluation', copy: '几何质量、视角一致性、纹理质量、编辑性和效率。' },
-        { label: 'Open Questions', copy: '可控性、物理一致性、数据偏差和跨表示迁移。' }
-      ]
-    },
-    {
-      title: '权重空间生成',
-      english: 'Weight-Space Generation',
-      accent: 'text-[#c7a4ff]',
-      categories: [
-        { label: 'Foundations', copy: '模型 zoo、权重表征、排列对称性和函数空间关系。' },
-        { label: 'Methods', copy: '超网络、权重扩散、checkpoint 生成和模型族插值。' },
-        { label: 'Evaluation', copy: '生成权重可训练性、下游性能、校准和跨架构泛化。' },
-        { label: 'Open Questions', copy: '参数空间语义、规模化数据、架构条件和安全边界。' }
-      ]
-    }
-  ];
+  const shouldReduceMotion = useReducedMotion();
 
   return (
     <section id="papers" className="bg-[#0a0a0a] px-4 py-20 sm:px-6 md:py-28">
@@ -452,41 +523,206 @@ function Papers() {
           <div>
             <p className="mb-4 text-xs font-bold uppercase tracking-[0.28em] text-primary/70">Paper map</p>
             <h2 className="max-w-3xl text-4xl font-normal leading-[0.98] text-[#E1E0CC] sm:text-5xl md:text-6xl">
-              论文地图先搭骨架，再慢慢填充真实阅读。
+              选择一个论文主题，进入完整阅读列表。
             </h2>
           </div>
           <p className="max-w-2xl text-sm leading-relaxed text-gray-400 md:text-base">
-            第一版不虚构具体论文条目。每个方向先保留四个固定槽位：基础、方法、评估和开放问题，后续可以把论文、笔记、代码和复现实验挂到对应位置。
+            首页只保留三条研究方向入口。每个主题页按 Foundations、Methods、Evaluation 和 Open Questions 分组，点击论文会直接在新标签打开 PDF。
           </p>
         </div>
 
-        <div className="grid gap-4">
-          {paperTracks.map((track) => (
-            <article key={track.title} className="rounded-lg border border-white/10 bg-[#151515] p-4 sm:p-5">
-              <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <h3 className="text-2xl font-bold text-[#E1E0CC]">{track.title}</h3>
-                  <p className="mt-1 text-xs uppercase tracking-[0.24em] text-white/35">{track.english}</p>
-                </div>
-                <span className={`w-fit rounded-full border border-white/10 px-3 py-1 text-xs font-bold ${track.accent}`}>
-                  待补充论文
-                </span>
-              </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          {PAPER_TOPICS.map((topic, index) => {
+            const paperCount = countPapers(topic);
 
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                {track.categories.map((category) => (
-                  <div key={category.label} className="min-h-[150px] rounded-lg border border-white/10 bg-black/30 p-4">
-                    <BookOpen className="mb-5 text-primary/80" size={20} strokeWidth={2} />
-                    <h4 className="text-lg font-semibold text-[#E1E0CC]">{category.label}</h4>
-                    <p className="mt-3 text-sm leading-relaxed text-gray-400">{category.copy}</p>
+            return (
+              <motion.a
+                key={topic.slug}
+                className="group relative flex min-h-[420px] overflow-hidden rounded-lg border border-white/10 bg-[#151515] p-5 no-underline transition-transform hover:-translate-y-1"
+                href={`#topic/${topic.slug}`}
+                initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-100px' }}
+                transition={{ duration: 0.85, delay: shouldReduceMotion ? 0 : index * 0.12, ease: MOTION_EASE }}
+              >
+                <img
+                  className="absolute inset-0 size-full object-cover opacity-45 transition duration-700 group-hover:scale-105 group-hover:opacity-65"
+                  src={topic.image}
+                  alt=""
+                  loading="lazy"
+                  aria-hidden="true"
+                />
+                <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-[#151515]/70 to-[#151515]" />
+                <div className="relative z-10 flex min-h-full flex-1 flex-col justify-between">
+                  <div>
+                    <span className={`text-xs font-bold uppercase tracking-[0.28em] ${topic.accent}`}>
+                      {paperCount > 0 ? `${paperCount} paper` : '待补充论文'}
+                    </span>
+                    <h3 className="mt-7 text-3xl font-bold leading-none text-[#E1E0CC]">{topic.title}</h3>
+                    <p className="mt-2 text-xs uppercase tracking-[0.22em] text-white/35">{topic.english}</p>
+                    <p className="mt-8 text-sm leading-relaxed text-gray-300">{topic.description}</p>
                   </div>
-                ))}
-              </div>
-            </article>
-          ))}
+                  <div>
+                    <p className="mb-5 text-sm leading-relaxed text-gray-500">{topic.status}</p>
+                    <span className="inline-flex w-fit items-center gap-2 text-sm font-medium text-primary">
+                      打开论文列表
+                      <ArrowRight className="-rotate-45 transition-transform group-hover:translate-x-1" size={17} strokeWidth={2} />
+                    </span>
+                  </div>
+                </div>
+              </motion.a>
+            );
+          })}
         </div>
       </div>
     </section>
+  );
+}
+
+function TopicPaperPage({ topic }: { topic: PaperTopic }) {
+  const shouldReduceMotion = useReducedMotion();
+
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, [topic.slug]);
+
+  return (
+    <div className="min-h-screen bg-black text-[#E1E0CC]">
+      <header className="relative overflow-hidden bg-black p-4 md:p-6">
+        <div className="relative min-h-[56vh] overflow-hidden rounded-2xl border border-white/10 bg-[#101010] md:rounded-[2rem]">
+          <img className="absolute inset-0 size-full object-cover opacity-45" src={topic.image} alt="" aria-hidden="true" />
+          <div className="noise-overlay absolute inset-0 opacity-[0.62] mix-blend-overlay pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/20 to-black/85 pointer-events-none" />
+          <nav className="absolute left-4 right-4 top-4 z-20 flex flex-wrap items-center justify-between gap-3 sm:left-6 sm:right-6 sm:top-6">
+            <a
+              className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/45 px-4 py-2 text-sm font-medium text-primary/85 backdrop-blur transition-colors hover:border-primary/40 hover:text-primary"
+              href="#papers"
+            >
+              <ArrowLeft size={16} strokeWidth={2} />
+              论文地图
+            </a>
+            <a
+              className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/45 px-4 py-2 text-sm font-medium text-primary/85 backdrop-blur transition-colors hover:border-primary/40 hover:text-primary"
+              href="#home"
+            >
+              首页
+              <ArrowRight size={16} strokeWidth={2} />
+            </a>
+          </nav>
+          <div className="relative z-10 flex min-h-[56vh] flex-col justify-end px-5 pb-8 pt-28 sm:px-8 md:px-10 md:pb-10">
+            <motion.p
+              className={`mb-5 text-xs font-bold uppercase tracking-[0.3em] ${topic.accent}`}
+              initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, ease: MOTION_EASE }}
+            >
+              {topic.english}
+            </motion.p>
+            <motion.h1
+              className="max-w-5xl text-5xl font-bold leading-none sm:text-6xl md:text-8xl"
+              initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 28 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.9, delay: shouldReduceMotion ? 0 : 0.08, ease: MOTION_EASE }}
+            >
+              {topic.title}
+            </motion.h1>
+            <motion.p
+              className="mt-6 max-w-2xl text-sm leading-relaxed text-gray-300 md:text-base"
+              initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: shouldReduceMotion ? 0 : 0.16, ease: MOTION_EASE }}
+            >
+              {topic.description}
+            </motion.p>
+          </div>
+        </div>
+      </header>
+
+      <main className="relative overflow-hidden bg-[#0a0a0a] px-4 py-16 sm:px-6 md:py-24">
+        <div className="bg-noise absolute inset-0 opacity-[0.12] pointer-events-none" />
+        <div className="relative z-10 mx-auto max-w-7xl">
+          <div className="mb-10 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="mb-3 text-xs font-bold uppercase tracking-[0.28em] text-primary/70">Paper list</p>
+              <h2 className="text-3xl font-normal leading-tight sm:text-4xl md:text-5xl">论文列表</h2>
+            </div>
+            <span className="w-fit rounded-full border border-white/10 px-3 py-1 text-xs font-bold text-primary/70">
+              {countPapers(topic)} papers
+            </span>
+          </div>
+
+          <div className="grid gap-4">
+            {topic.categories.map((category) => (
+              <section key={category.label} className="rounded-lg border border-white/10 bg-[#151515] p-4 sm:p-5">
+                <div className="mb-5 grid gap-3 md:grid-cols-[260px_1fr] md:items-start">
+                  <div>
+                    <BookOpen className="mb-4 text-primary/80" size={20} strokeWidth={2} />
+                    <h3 className="text-2xl font-bold leading-none">{category.label}</h3>
+                  </div>
+                  <p className="max-w-3xl text-sm leading-relaxed text-gray-400">{category.copy}</p>
+                </div>
+
+                {category.papers.length ? (
+                  <div className="grid gap-3">
+                    {category.papers.map((paper) =>
+                      paper.pdfUrl ? (
+                        <a
+                          key={paper.title}
+                          className="group grid gap-5 rounded-lg border border-white/10 bg-black/30 p-4 no-underline transition-colors hover:border-primary/30 hover:bg-black/45 md:grid-cols-[1fr_auto] md:items-center"
+                          href={paper.pdfUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <div className="min-w-0">
+                            <div className="flex items-start gap-3">
+                              <FileText className="mt-1 shrink-0 text-primary/75" size={20} strokeWidth={2} />
+                              <div className="min-w-0">
+                                <h4 className="text-xl font-bold leading-tight text-[#E1E0CC]">{paper.title}</h4>
+                                <p className="mt-2 text-sm leading-relaxed text-gray-500">{paper.authors}</p>
+                                <p className="mt-2 text-xs uppercase tracking-[0.18em] text-white/30">{paper.meta}</p>
+                              </div>
+                            </div>
+                            <p className="mt-5 max-w-3xl text-sm leading-relaxed text-gray-400">{paper.abstract}</p>
+                            <div className="mt-4 flex flex-wrap gap-1.5">
+                              {paper.tags.map((tag) => (
+                                <span key={tag} className="rounded-full border border-white/10 px-2 py-1 text-[11px] text-primary/65">
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          <span className="inline-flex w-fit items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-bold text-black transition-transform group-hover:-translate-y-0.5">
+                            Open PDF
+                            <ExternalLink size={16} strokeWidth={2} />
+                          </span>
+                        </a>
+                      ) : (
+                        <article key={paper.title} className="rounded-lg border border-white/10 bg-black/30 p-4">
+                          <h4 className="text-xl font-bold leading-tight">{paper.title}</h4>
+                          <p className="mt-3 text-sm text-gray-500">PDF 待上传</p>
+                        </article>
+                      )
+                    )}
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-dashed border-white/12 bg-black/20 p-4">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-primary/70">
+                      <FileText size={17} strokeWidth={2} />
+                      待补充论文
+                    </div>
+                    <p className="mt-2 text-sm leading-relaxed text-gray-500">这一组还没有接入 PDF，后续可以把原文和笔记挂到这里。</p>
+                  </div>
+                )}
+              </section>
+            ))}
+          </div>
+        </div>
+      </main>
+      <footer className="flex flex-col gap-2 bg-black px-5 py-7 text-sm text-gray-500 sm:flex-row sm:justify-between sm:px-8 lg:px-14">
+        <span>© 2026 Letian Qi</span>
+        <span>{topic.title} paper list</span>
+      </footer>
+    </div>
   );
 }
 
@@ -635,6 +871,40 @@ function AcademicHomepage() {
   );
 }
 
+function TopicNotFoundPage() {
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, []);
+
+  return (
+    <div className="grid min-h-screen place-items-center bg-black px-4 text-[#E1E0CC]">
+      <div className="max-w-xl rounded-lg border border-white/10 bg-[#151515] p-6 text-center">
+        <p className="mb-4 text-xs font-bold uppercase tracking-[0.28em] text-primary/70">Paper topic</p>
+        <h1 className="text-4xl font-bold leading-none">没有找到这个论文主题</h1>
+        <p className="mt-5 text-sm leading-relaxed text-gray-400">请回到论文地图，从三大研究方向中选择一个主题。</p>
+        <a
+          className="mt-8 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-black transition-transform hover:-translate-y-0.5"
+          href="#papers"
+        >
+          返回论文地图
+          <ArrowRight size={16} strokeWidth={2} />
+        </a>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
+  const hash = useHashRoute();
+  const topic = getTopicFromHash(hash);
+
+  if (hash.startsWith('#topic/') && !topic) {
+    return <TopicNotFoundPage />;
+  }
+
+  if (topic) {
+    return <TopicPaperPage topic={topic} />;
+  }
+
   return <AcademicHomepage />;
 }
