@@ -1,11 +1,33 @@
-import { CSSProperties, useEffect, useRef, useState } from 'react';
-import { ArrowUpRight, Github, Mail, Menu } from 'lucide-react';
+import { CSSProperties, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {
+  motion,
+  useInView,
+  useReducedMotion,
+  useScroll,
+  useTransform,
+  type MotionValue
+} from 'framer-motion';
+import { ArrowRight, ArrowUpRight, Check, Github, Mail, Menu } from 'lucide-react';
 
-const BG_IMAGE_1 =
+const PERSONAL_BG_IMAGE_1 =
   'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260609_195923_b0ba8ace-1d1d-4f2c-9a28-1ab84b330680.png&w=1280&q=85';
-const BG_IMAGE_2 =
+const PERSONAL_BG_IMAGE_2 =
   'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260609_201152_bba90a12-bf12-459f-91f0-51f237dbaf3b.png&w=1280&q=85';
-const SPOTLIGHT_R = 260;
+
+const PRISMA_HERO_VIDEO =
+  'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260405_170732_8a9ccda6-5cff-4628-b164-059c500a2b41.mp4';
+const FEATURE_VIDEO =
+  'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260406_133058_0504132a-0cf3-4450-a370-8ea3b05c95d4.mp4';
+const STORYBOARD_ICON =
+  'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260405_171918_4a5edc79-d78f-4637-ac8b-53c43c220606.png&w=1280&q=85';
+const CRITIQUES_ICON =
+  'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260405_171741_ed9845ab-f5b2-4018-8ce7-07cc01823522.png&w=1280&q=85';
+const IMMERSION_ICON =
+  'https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2Fhf_20260405_171809_f56666dc-c099-4778-ad82-9ad4f209567b.png&w=1280&q=85';
+
+const PERSONAL_SPOTLIGHT_R = 260;
+const PRIMARY_TEXT = '#E1E0CC';
+const MOTION_EASE = [0.16, 1, 0.3, 1] as const;
 
 type Point = {
   x: number;
@@ -16,6 +38,31 @@ type RevealLayerProps = {
   image: string;
   cursorX: number;
   cursorY: number;
+};
+
+type WordsPullUpProps = {
+  text: string;
+  className?: string;
+  delay?: number;
+  showAsterisk?: boolean;
+};
+
+type MultiStyleSegment = {
+  text: string;
+  className?: string;
+};
+
+type WordsPullUpMultiStyleProps = {
+  segments: MultiStyleSegment[];
+  className?: string;
+  delay?: number;
+};
+
+type FeatureSpec = {
+  index: string;
+  title: string;
+  icon: string;
+  items: string[];
 };
 
 function RevealLayer({ image, cursorX, cursorY }: RevealLayerProps) {
@@ -45,7 +92,14 @@ function RevealLayer({ image, cursorX, cursorY }: RevealLayerProps) {
     if (!canvas || !context) return;
 
     context.clearRect(0, 0, canvas.width, canvas.height);
-    const gradient = context.createRadialGradient(cursorX, cursorY, 0, cursorX, cursorY, SPOTLIGHT_R);
+    const gradient = context.createRadialGradient(
+      cursorX,
+      cursorY,
+      0,
+      cursorX,
+      cursorY,
+      PERSONAL_SPOTLIGHT_R
+    );
     gradient.addColorStop(0, 'rgba(255,255,255,1)');
     gradient.addColorStop(0.4, 'rgba(255,255,255,1)');
     gradient.addColorStop(0.6, 'rgba(255,255,255,0.75)');
@@ -54,7 +108,7 @@ function RevealLayer({ image, cursorX, cursorY }: RevealLayerProps) {
     gradient.addColorStop(1, 'rgba(255,255,255,0)');
     context.fillStyle = gradient;
     context.beginPath();
-    context.arc(cursorX, cursorY, SPOTLIGHT_R, 0, Math.PI * 2);
+    context.arc(cursorX, cursorY, PERSONAL_SPOTLIGHT_R, 0, Math.PI * 2);
     context.fill();
 
     setMaskImage(`url(${canvas.toDataURL()})`);
@@ -76,7 +130,7 @@ function RevealLayer({ image, cursorX, cursorY }: RevealLayerProps) {
   );
 }
 
-function LogoMark() {
+function PersonalLogoMark() {
   return (
     <span
       className="grid size-9 place-items-center rounded-full border border-white/30 bg-white/20 text-sm font-semibold text-white shadow-[0_10px_28px_rgba(0,0,0,0.18)] backdrop-blur-md"
@@ -87,7 +141,401 @@ function LogoMark() {
   );
 }
 
-export default function App() {
+function WordsPullUp({ text, className = '', delay = 0, showAsterisk = false }: WordsPullUpProps) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const isInView = useInView(ref, { once: true, margin: '-40px' });
+  const shouldReduceMotion = useReducedMotion();
+  const words = text.split(' ');
+
+  return (
+    <div ref={ref} className={`inline-flex flex-wrap justify-center ${className}`} aria-label={text}>
+      {words.map((word, index) => {
+        const isLastWord = index === words.length - 1;
+        const wordDelay = shouldReduceMotion ? 0 : delay + index * 0.08;
+        const finalLetter = word.slice(-1);
+        const prefix = word.slice(0, -1);
+
+        return (
+          <motion.span
+            key={`${word}-${index}`}
+            className="inline-block overflow-visible"
+            initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+            animate={isInView ? { opacity: 1, y: 0 } : undefined}
+            transition={{ duration: 0.85, delay: wordDelay, ease: MOTION_EASE }}
+          >
+            {showAsterisk && isLastWord ? (
+              <>
+                {prefix}
+                <span className="relative inline-block">
+                  {finalLetter}
+                  <span className="absolute -right-[0.3em] top-[0.65em] text-[0.31em] leading-none">*</span>
+                </span>
+              </>
+            ) : (
+              word
+            )}
+            {index < words.length - 1 ? ' ' : null}
+          </motion.span>
+        );
+      })}
+    </div>
+  );
+}
+
+function WordsPullUpMultiStyle({ segments, className = '', delay = 0 }: WordsPullUpMultiStyleProps) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const isInView = useInView(ref, { once: true, margin: '-40px' });
+  const shouldReduceMotion = useReducedMotion();
+  const words = segments.flatMap((segment) =>
+    segment.text.split(' ').map((word) => ({
+      word,
+      className: segment.className ?? ''
+    }))
+  );
+
+  return (
+    <div ref={ref} className={`inline-flex flex-wrap justify-center ${className}`}>
+      {words.map((item, index) => (
+        <motion.span
+          key={`${item.word}-${index}`}
+          className={`inline-block ${item.className}`}
+          initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+          animate={isInView ? { opacity: 1, y: 0 } : undefined}
+          transition={{ duration: 0.85, delay: shouldReduceMotion ? 0 : delay + index * 0.08, ease: MOTION_EASE }}
+        >
+          {item.word}
+          {index < words.length - 1 ? ' ' : null}
+        </motion.span>
+      ))}
+    </div>
+  );
+}
+
+function AnimatedLetter({
+  char,
+  index,
+  total,
+  progress
+}: {
+  char: string;
+  index: number;
+  total: number;
+  progress: MotionValue<number>;
+}) {
+  const shouldReduceMotion = useReducedMotion();
+  const charProgress = index / total;
+  const opacity = useTransform(progress, [charProgress - 0.1, charProgress + 0.05], [0.2, 1]);
+
+  return (
+    <motion.span style={{ opacity: shouldReduceMotion ? 1 : opacity }}>
+      {char}
+    </motion.span>
+  );
+}
+
+function AnimatedParagraph({ text }: { text: string }) {
+  const ref = useRef<HTMLParagraphElement | null>(null);
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ['start 0.8', 'end 0.2']
+  });
+  const chars = Array.from(text);
+
+  return (
+    <p ref={ref} className="mx-auto mt-8 max-w-3xl text-xs leading-[1.45] text-[#DEDBC8] sm:text-sm md:text-base">
+      {chars.map((char, index) => (
+        <AnimatedLetter
+          key={`${char}-${index}`}
+          char={char}
+          index={index}
+          total={Math.max(chars.length - 1, 1)}
+          progress={scrollYProgress}
+        />
+      ))}
+    </p>
+  );
+}
+
+function scrollToCurrentHash() {
+  const hash = window.location.hash;
+
+  if (!hash) {
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    window.scrollTo({ top: 0, behavior: 'auto' });
+    return;
+  }
+
+  const target = document.getElementById(hash.slice(1));
+  if (!target) return;
+
+  const top = target.getBoundingClientRect().top + window.scrollY;
+  document.documentElement.scrollTop = top;
+  document.body.scrollTop = top;
+  window.scrollTo({ top, behavior: 'auto' });
+}
+
+function useMountedHashScroll() {
+  useLayoutEffect(() => {
+    const frameId = window.requestAnimationFrame(scrollToCurrentHash);
+    const timeoutIds = [120, 420, 820].map((delay) => window.setTimeout(scrollToCurrentHash, delay));
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      timeoutIds.forEach((timeoutId) => {
+        window.clearTimeout(timeoutId);
+      });
+    };
+  }, []);
+}
+
+function PrismaHero() {
+  const navItems = [
+    { label: 'Our story', href: '#about' },
+    { label: 'Collective', href: '#features' },
+    { label: 'Workshops', href: '#features' },
+    { label: 'Programs', href: '#features' },
+    { label: 'Inquiries', href: '#features' }
+  ];
+  const shouldReduceMotion = useReducedMotion();
+
+  return (
+    <section id="hero" className="min-h-screen bg-black p-4 md:p-6" style={{ color: PRIMARY_TEXT }}>
+      <div className="relative min-h-[calc(100vh-2rem)] overflow-hidden rounded-2xl bg-black md:min-h-[calc(100vh-3rem)] md:rounded-[2rem]">
+        <video
+          className="absolute inset-0 size-full object-cover"
+          src={PRISMA_HERO_VIDEO}
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="metadata"
+        />
+        <div className="noise-overlay absolute inset-0 opacity-[0.7] mix-blend-overlay pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/60 pointer-events-none" />
+
+        <nav className="absolute left-1/2 top-0 z-30 -translate-x-1/2 rounded-b-2xl bg-black px-4 py-2 md:rounded-b-3xl md:px-8">
+          <div className="flex items-center gap-3 whitespace-nowrap text-[10px] sm:gap-6 sm:text-xs md:gap-12 md:text-sm lg:gap-14">
+            {navItems.map((item) => (
+              <a
+                key={item.label}
+                href={item.href}
+                className="transition-colors"
+                style={{ color: 'rgba(225, 224, 204, 0.8)' }}
+                onMouseEnter={(event) => {
+                  event.currentTarget.style.color = PRIMARY_TEXT;
+                }}
+                onMouseLeave={(event) => {
+                  event.currentTarget.style.color = 'rgba(225, 224, 204, 0.8)';
+                }}
+              >
+                {item.label}
+              </a>
+            ))}
+          </div>
+        </nav>
+
+        <div className="absolute bottom-0 left-0 right-0 z-20 grid items-end gap-8 px-5 pb-7 sm:px-7 md:grid-cols-12 md:px-8 md:pb-8 lg:px-10">
+          <div className="md:col-span-8">
+            <h1 className="font-medium leading-[0.85] text-[#E1E0CC]">
+              <WordsPullUp
+                text="Prisma"
+                showAsterisk
+                className="text-7xl sm:text-9xl md:text-[10rem] lg:text-[12rem] xl:text-[14rem] 2xl:text-[16rem]"
+              />
+            </h1>
+          </div>
+
+          <div className="grid gap-5 md:col-span-4 md:pb-3">
+            <motion.p
+              className="max-w-md text-xs leading-[1.2] text-primary/70 sm:text-sm md:text-base"
+              initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.9, delay: shouldReduceMotion ? 0 : 0.5, ease: MOTION_EASE }}
+            >
+              Prisma is a worldwide network of visual artists, filmmakers and storytellers bound not by place, status
+              or labels but by passion and hunger to unlock potential through our unique perspectives.
+            </motion.p>
+            <motion.a
+              className="group inline-flex w-fit items-center gap-2 rounded-full bg-primary py-1 pl-6 pr-1 text-sm font-medium text-black transition-all hover:gap-3 sm:text-base"
+              href="#about"
+              initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.9, delay: shouldReduceMotion ? 0 : 0.7, ease: MOTION_EASE }}
+            >
+              Join the lab
+              <span className="grid size-9 place-items-center rounded-full bg-black transition-transform group-hover:scale-110 sm:size-10">
+                <ArrowRight className="text-primary" size={18} strokeWidth={2} />
+              </span>
+            </motion.a>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PrismaAbout() {
+  return (
+    <section id="about" className="bg-black px-4 py-20 sm:px-6 md:py-28" style={{ color: PRIMARY_TEXT }}>
+      <div className="mx-auto max-w-6xl rounded-lg bg-[#101010] px-5 py-20 text-center sm:px-8 md:py-28">
+        <p className="mb-7 text-[10px] font-bold uppercase text-primary sm:text-xs">Visual arts</p>
+        <h2 className="mx-auto max-w-3xl text-3xl leading-[0.95] sm:text-4xl sm:leading-[0.9] md:text-5xl lg:text-6xl xl:text-7xl">
+          <WordsPullUpMultiStyle
+            segments={[
+              { text: 'I am Marcus Chen,', className: 'font-normal' },
+              { text: 'a self-taught director.', className: 'font-serif italic' },
+              {
+                text: 'I have skills in color grading, visual effects, and narrative design.',
+                className: 'font-normal'
+              }
+            ]}
+          />
+        </h2>
+        <AnimatedParagraph text="Over the last seven years, I have worked with Parallax, a Berlin-based production house that crafts cinema, series, and Noir Studio in Paris. Together, we have created work that has earned international acclaim at several major festivals." />
+      </div>
+    </section>
+  );
+}
+
+function VideoFeatureCard() {
+  const ref = useRef<HTMLElement | null>(null);
+  const isInView = useInView(ref, { once: true, margin: '-100px' });
+  const shouldReduceMotion = useReducedMotion();
+
+  return (
+    <motion.article
+      ref={ref}
+      className="relative min-h-[360px] overflow-hidden rounded-lg bg-[#212121] lg:h-[480px]"
+      initial={shouldReduceMotion ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.95 }}
+      animate={isInView ? { opacity: 1, scale: 1 } : undefined}
+      transition={{ duration: 0.9, delay: 0, ease: [0.22, 1, 0.36, 1] }}
+    >
+      <video
+        className="absolute inset-0 size-full object-cover"
+        src={FEATURE_VIDEO}
+        autoPlay
+        loop
+        muted
+        playsInline
+        preload="metadata"
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/10 to-black/55" />
+      <p className="absolute bottom-5 left-5 right-5 text-xl font-medium text-[#E1E0CC] sm:text-2xl">
+        Your creative canvas.
+      </p>
+    </motion.article>
+  );
+}
+
+function FeatureCard({ feature, delay }: { feature: FeatureSpec; delay: number }) {
+  const ref = useRef<HTMLElement | null>(null);
+  const isInView = useInView(ref, { once: true, margin: '-100px' });
+  const shouldReduceMotion = useReducedMotion();
+
+  return (
+    <motion.article
+      ref={ref}
+      className="flex min-h-[360px] flex-col justify-between rounded-lg bg-[#212121] p-5 lg:h-[480px]"
+      initial={shouldReduceMotion ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.95 }}
+      animate={isInView ? { opacity: 1, scale: 1 } : undefined}
+      transition={{ duration: 0.9, delay: shouldReduceMotion ? 0 : delay, ease: [0.22, 1, 0.36, 1] }}
+    >
+      <div>
+        <img
+          src={feature.icon}
+          alt=""
+          className="size-10 rounded-lg object-cover sm:size-12"
+          loading="lazy"
+          aria-hidden="true"
+        />
+        <div className="mt-10 flex items-end justify-between gap-4">
+          <h3 className="text-2xl font-bold leading-none text-[#E1E0CC]">
+            {feature.title}
+            <span className="ml-2 align-top text-xs font-normal text-gray-500">{feature.index}</span>
+          </h3>
+        </div>
+        <ul className="mt-8 grid gap-3">
+          {feature.items.map((item) => (
+            <li key={item} className="flex items-start gap-3 text-sm leading-snug text-gray-400">
+              <Check className="mt-0.5 shrink-0 text-primary" size={16} strokeWidth={2} />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <a href="#features" className="mt-10 inline-flex w-fit items-center gap-2 text-sm font-medium text-primary">
+        Learn more
+        <ArrowRight className="-rotate-45" size={17} strokeWidth={2} />
+      </a>
+    </motion.article>
+  );
+}
+
+function PrismaFeatures() {
+  const features: FeatureSpec[] = [
+    {
+      index: '01',
+      title: 'Project Storyboard.',
+      icon: STORYBOARD_ICON,
+      items: ['Scene-by-scene planning', 'Shared visual references', 'Shot lists for every team', 'Creative approvals in flow']
+    },
+    {
+      index: '02',
+      title: 'Smart Critiques.',
+      icon: CRITIQUES_ICON,
+      items: ['AI-assisted visual analysis', 'Time-coded creative notes', 'Integrations with editing tools']
+    },
+    {
+      index: '03',
+      title: 'Immersion Capsule.',
+      icon: IMMERSION_ICON,
+      items: ['Notification silencing', 'Ambient soundscapes', 'Schedule syncing for deep work']
+    }
+  ];
+
+  return (
+    <section id="features" className="relative min-h-screen overflow-hidden bg-black px-4 py-20 sm:px-6 md:py-28">
+      <div className="bg-noise absolute inset-0 opacity-[0.15] pointer-events-none" />
+      <div className="relative z-10 mx-auto max-w-7xl">
+        <div className="mx-auto mb-12 max-w-4xl text-center text-xl font-normal leading-tight sm:text-2xl md:text-3xl lg:text-4xl">
+          <WordsPullUpMultiStyle
+            segments={[{ text: 'Studio-grade workflows for visionary creators.', className: 'text-[#E1E0CC]' }]}
+          />
+          <div className="mt-1">
+            <WordsPullUpMultiStyle
+              segments={[{ text: 'Built for pure vision. Powered by art.', className: 'text-gray-500' }]}
+              delay={0.25}
+            />
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:gap-2 md:grid-cols-2 md:gap-1 lg:grid-cols-4">
+          <VideoFeatureCard />
+          {features.map((feature, index) => (
+            <FeatureCard key={feature.title} feature={feature} delay={(index + 1) * 0.15} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PrismaLanding() {
+  useMountedHashScroll();
+
+  return (
+    <div className="min-h-screen bg-black">
+      <PrismaHero />
+      <PrismaAbout />
+      <PrismaFeatures />
+    </div>
+  );
+}
+
+function PersonalHomepage() {
+  useMountedHashScroll();
+
   const mouse = useRef<Point>({ x: -999, y: -999 });
   const smooth = useRef<Point>({ x: -999, y: -999 });
   const rafRef = useRef<number | null>(null);
@@ -118,10 +566,10 @@ export default function App() {
   }, []);
 
   const navItems = [
-    { label: '首页', href: '#top' },
-    { label: '方向', href: '#focus' },
-    { label: '项目', href: '#work' },
-    { label: '联系', href: '#contact' }
+    { label: '首页', href: '#personal' },
+    { label: '方向', href: '#personal-focus' },
+    { label: '项目', href: '#personal-work' },
+    { label: '联系', href: '#personal-contact' }
   ];
 
   const focusItems = [
@@ -153,7 +601,7 @@ export default function App() {
       label: 'Research',
       title: '研究笔记与报告',
       copy: '持续整理论文阅读、课程报告和实验记录，保留从问题到结果的推理链路。',
-      href: '#contact'
+      href: '#personal-contact'
     },
     {
       label: 'GitHub Profile',
@@ -164,10 +612,10 @@ export default function App() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f6f4ef] text-[#171b18]" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="min-h-screen bg-[#f6f4ef] text-[#171b18]" style={{ fontFamily: "'Almarai', sans-serif" }}>
       <nav className="fixed left-0 right-0 top-0 z-[100] flex items-center justify-between border-b border-white/10 bg-black/25 px-4 py-3 backdrop-blur-md sm:px-5">
-        <a href="#top" className="flex items-center gap-2.5" aria-label="Letian Qi home">
-          <LogoMark />
+        <a href="#personal" className="flex items-center gap-2.5" aria-label="Letian Qi home">
+          <PersonalLogoMark />
           <span className="text-lg font-semibold text-white sm:text-xl">Letian Qi</span>
         </a>
 
@@ -198,14 +646,14 @@ export default function App() {
         </button>
       </nav>
 
-      <main id="top">
+      <main id="personal">
         <section className="relative w-full overflow-hidden bg-black" style={{ height: '100dvh' }}>
           <div
             className="absolute inset-0 bg-center bg-cover bg-no-repeat z-10 hero-zoom"
-            style={{ backgroundImage: `url(${BG_IMAGE_1})` }}
+            style={{ backgroundImage: `url(${PERSONAL_BG_IMAGE_1})` }}
           />
 
-          <RevealLayer image={BG_IMAGE_2} cursorX={cursorPos.x} cursorY={cursorPos.y} />
+          <RevealLayer image={PERSONAL_BG_IMAGE_2} cursorX={cursorPos.x} cursorY={cursorPos.y} />
 
           <div className="absolute inset-0 z-40 bg-[linear-gradient(180deg,rgba(0,0,0,0.22)_0%,rgba(0,0,0,0.08)_34%,rgba(0,0,0,0.78)_100%)] pointer-events-none" />
 
@@ -218,7 +666,7 @@ export default function App() {
             </p>
             <h1 className="text-white leading-[0.92]" aria-label="Letian Qi">
               <span
-                className="block font-playfair italic font-normal text-6xl sm:text-8xl md:text-9xl hero-anim hero-reveal"
+                className="block font-serif italic font-normal text-6xl sm:text-8xl md:text-9xl hero-anim hero-reveal"
                 style={{ animationDelay: '0.25s' }}
               >
                 Letian
@@ -273,7 +721,10 @@ export default function App() {
           </div>
         </section>
 
-        <section id="focus" className="border-b border-[#d8ddd2] bg-[#eef2e9] px-5 py-20 sm:px-8 lg:px-14 lg:py-28">
+        <section
+          id="personal-focus"
+          className="border-b border-[#d8ddd2] bg-[#eef2e9] px-5 py-20 sm:px-8 lg:px-14 lg:py-28"
+        >
           <div className="mx-auto w-full max-w-6xl">
             <p className="mb-3 text-xs font-extrabold uppercase text-[#b76135] sm:text-sm">Focus</p>
             <h2 className="max-w-3xl text-4xl font-semibold leading-none text-[#171b18] sm:text-5xl lg:text-6xl">
@@ -294,7 +745,7 @@ export default function App() {
           </div>
         </section>
 
-        <section id="work" className="bg-[#f6f4ef] px-5 py-20 sm:px-8 lg:px-14 lg:py-28">
+        <section id="personal-work" className="bg-[#f6f4ef] px-5 py-20 sm:px-8 lg:px-14 lg:py-28">
           <div className="mx-auto grid w-full max-w-6xl gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-20">
             <div>
               <p className="mb-3 text-xs font-extrabold uppercase text-[#b76135] sm:text-sm">Work</p>
@@ -332,7 +783,7 @@ export default function App() {
           </div>
         </section>
 
-        <section id="contact" className="bg-[#171b18] px-5 py-20 text-white sm:px-8 lg:px-14 lg:py-24">
+        <section id="personal-contact" className="bg-[#171b18] px-5 py-20 text-white sm:px-8 lg:px-14 lg:py-24">
           <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="mb-3 text-xs font-extrabold uppercase text-[#d99668] sm:text-sm">Contact</p>
@@ -364,4 +815,52 @@ export default function App() {
       </main>
     </div>
   );
+}
+
+export default function App() {
+  const [hash, setHash] = useState(() => window.location.hash);
+
+  useEffect(() => {
+    const updateHash = () => {
+      setHash(window.location.hash);
+    };
+
+    window.addEventListener('hashchange', updateHash);
+    return () => {
+      window.removeEventListener('hashchange', updateHash);
+    };
+  }, []);
+
+  useEffect(() => {
+    const scrollToHash = () => {
+      if (!hash) {
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+        window.scrollTo({ top: 0, behavior: 'auto' });
+        return;
+      }
+
+      const target = document.getElementById(hash.slice(1));
+      if (!target) return;
+
+      const top = target.getBoundingClientRect().top + window.scrollY;
+      document.documentElement.scrollTop = top;
+      document.body.scrollTop = top;
+      window.scrollTo({ top, behavior: 'auto' });
+    };
+
+    const timeoutIds = [80, 260, 620].map((delay) => window.setTimeout(scrollToHash, delay));
+
+    return () => {
+      timeoutIds.forEach((timeoutId) => {
+        window.clearTimeout(timeoutId);
+      });
+    };
+  }, [hash]);
+
+  if (hash === '#personal' || hash.startsWith('#personal-')) {
+    return <PersonalHomepage />;
+  }
+
+  return <PrismaLanding />;
 }

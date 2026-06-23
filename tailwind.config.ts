@@ -3,7 +3,14 @@ import type { Config } from 'tailwindcss';
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
-    extend: {}
+    extend: {
+      colors: {
+        primary: '#DEDBC8'
+      },
+      fontFamily: {
+        serif: ['"Instrument Serif"', 'serif']
+      }
+    }
   },
   plugins: []
 } satisfies Config;
