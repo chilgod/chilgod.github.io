@@ -108,15 +108,84 @@ const PAPER_TOPICS: PaperTopic[] = [
     title: '权重空间生成',
     english: 'Weight-Space Generation',
     description: '把 neural network weights 当作生成对象，整理模型 zoo、权重扩散和 checkpoint 生成相关工作。',
-    status: '已接入 1 篇 PDF',
+    status: '已接入 11 篇 PDF',
     accent: 'text-[#c7a4ff]',
     image: WEIGHT_IMAGE,
     categories: [
-      { label: 'Foundations', copy: '模型 zoo、权重表征、排列对称性和函数空间关系。', papers: [] },
+      {
+        label: 'Foundations',
+        copy: '模型 zoo、权重表征、排列对称性和函数空间关系。',
+        papers: [
+          {
+            title: 'Efficient Low-Dimensional Compression of Overparameterized Models',
+            authors: 'Soo Min Kwon, Zekai Zhang, Laura Balzano',
+            meta: '2024',
+            abstract: '从训练动态出发研究过参数化模型的低维不变子空间，并用这种结构设计压缩网络的方法。',
+            tags: ['compression', 'low-dimensional subspace', 'optimization'],
+            pdfUrl: '/papers/efficient-low-dimensional-compression-of-overparameterized-models.pdf'
+          },
+          {
+            title: 'Exploring Universal Intrinsic Task Subspace via Prompt Tuning',
+            authors: 'Yujia Qin, Xiaozhi Wang, Yusheng Su, Yankai Lin, Ning Ding, Jing Yi, Weize Chen, Zhiyuan Liu, Juanzi Li, Lei Hou, Peng Li, Maosong Sun, Jie Zhou',
+            meta: 'arXiv:2110.07867v3 · 2022',
+            abstract: '用 prompt tuning 探索跨 NLP 任务共享的内在任务子空间，可作为理解参数高效适配空间的背景阅读。',
+            tags: ['intrinsic subspace', 'prompt tuning', 'adaptation'],
+            pdfUrl: '/papers/exploring-universal-intrinsic-task-subspace-via-prompt-tuning.pdf'
+          },
+          {
+            title: 'Equivariant Architectures for Learning in Deep Weight Spaces',
+            authors: 'Aviv Navon, Aviv Shamsian, Idan Achituve, Ethan Fetaya, Gal Chechik, Haggai Maron',
+            meta: '2023',
+            abstract: '针对深度网络权重的排列对称性构造等变/不变层，是权重空间学习架构设计的重要基础。',
+            tags: ['equivariance', 'deep weight spaces', 'symmetry'],
+            pdfUrl: '/papers/equivariant-architectures-for-learning-in-deep-weight-spaces.pdf'
+          },
+          {
+            title: 'Graph Metanetworks for Processing Diverse Neural Architectures',
+            authors: 'Derek Lim, Haggai Maron, Marc T. Law, James Lucas, Jonathan Lorraine',
+            meta: 'arXiv:2312.04501v2 · 2023',
+            abstract: '把神经网络架构和参数组织成图结构处理，目标是支持跨多样神经架构的 metanetwork 表征。',
+            tags: ['graph metanetworks', 'diverse architectures', 'model processing'],
+            pdfUrl: '/papers/graph-metanetworks-for-processing-diverse-neural-architectures.pdf'
+          }
+        ]
+      },
       {
         label: 'Methods',
         copy: '超网络、权重扩散、checkpoint 生成和模型族插值。',
         papers: [
+          {
+            title: 'Towards Scalable and Versatile Weight Space Learning',
+            authors: 'Konstantin Schurholt, Michael W. Mahoney, Damian Borth',
+            meta: 'ICML 2024',
+            abstract: '提出 SANE，将大型神经网络权重按 token 序列处理，扩展 hyper-representation 到更大模型和多任务场景。',
+            tags: ['SANE', 'representation learning', 'model zoos'],
+            pdfUrl: '/papers/towards-scalable-and-versatile-weight-space-learning.pdf'
+          },
+          {
+            title: 'Improved Generalization of Weight Space Networks via Augmentations',
+            authors: 'Aviv Shamsian, Aviv Navon, David W. Zhang, Yan Zhang, Ethan Fetaya, Gal Chechik, Haggai Maron',
+            meta: 'ICML 2024',
+            abstract: '分析 deep weight space 数据过拟合问题，并提出适配权重空间的增强策略来提升泛化。',
+            tags: ['augmentation', 'generalization', 'DWS'],
+            pdfUrl: '/papers/improved-generalization-of-weight-space-networks-via-augmentations.pdf'
+          },
+          {
+            title: 'Interpreting the Weight Space of Customized Diffusion Models',
+            authors: 'Amil Dravid, Rameen Abdal, Gordon Wetzstein, Yossi Gandelsman, Kuan-Chieh Wang, Alexei A. Efros, Kfir Aberman',
+            meta: '2024',
+            abstract: '研究 customized diffusion models 的权重空间，并用 weights2weights 思路进行身份、属性等方向的解释和编辑。',
+            tags: ['diffusion models', 'weight-space interpretation', 'editing'],
+            pdfUrl: '/papers/interpreting-the-weight-space-of-customized-diffusion-models.pdf'
+          },
+          {
+            title: 'Diffusion-Based Neural Network Weights Generation',
+            authors: 'Soro Bedionita, Bruno Andreis, Hayeon Lee, Frank Hutter, Sung Ju Hwang, Wonyong Jeong, Song Chong',
+            meta: 'ICLR 2025',
+            abstract: '提出 D2NWG，用扩散过程合成任务相关网络权重，减少模型选择和大规模模型存储的负担。',
+            tags: ['diffusion', 'weight generation', 'transfer learning'],
+            pdfUrl: '/papers/diffusion-based-neural-network-weights-generation.pdf'
+          },
           {
             title: 'Neural Network Diffusion',
             authors: 'Kai Wang, Dongwen Tang, Boya Zeng, Yida Yin, Zhaopan Xu, Yukun Zhou, Zelin Zang, Trevor Darrell, Zhuang Liu, Yang You',
@@ -124,6 +193,22 @@ const PAPER_TOPICS: PaperTopic[] = [
             abstract: '用自编码器提取网络参数子集的潜表示，再用扩散模型生成新的潜表示，解码为高性能网络参数。',
             tags: ['diffusion', 'weights', 'parameter generation'],
             pdfUrl: '/papers/neural-network-diffusion.pdf'
+          },
+          {
+            title: 'HyperDiffusion: Generating Implicit Neural Fields with Weight-Space Diffusion',
+            authors: 'Ziya Erkoc, Fangchang Ma, Qi Shan, Matthias Niessner, Angela Dai',
+            meta: 'ICCV 2023',
+            abstract: '在隐式神经场权重空间中训练扩散模型，用于生成 3D/4D implicit neural fields。',
+            tags: ['weight-space diffusion', 'implicit neural fields', '3D generation'],
+            pdfUrl: '/papers/hyperdiffusion-generating-implicit-neural-fields-with-weight-space-diffusion.pdf'
+          },
+          {
+            title: 'Weight Space Representation Learning on Diverse NeRF Architectures',
+            authors: 'Francesco Ballerini, Pierluigi Zama Ramirez, Luigi Di Stefano, Samuele Salti',
+            meta: 'ICLR 2026',
+            abstract: '面向多种 NeRF 架构学习架构无关的权重空间表征，支持分类、检索和语言相关任务。',
+            tags: ['NeRF', 'representation learning', 'architecture-agnostic'],
+            pdfUrl: '/papers/weight-space-representation-learning-on-diverse-nerf-architectures.pdf'
           }
         ]
       },
@@ -556,7 +641,7 @@ function Papers() {
                 <div className="relative z-10 flex min-h-full flex-1 flex-col justify-between">
                   <div>
                     <span className={`text-xs font-bold uppercase tracking-[0.28em] ${topic.accent}`}>
-                      {paperCount > 0 ? `${paperCount} paper` : '待补充论文'}
+                      {paperCount > 0 ? `${paperCount} ${paperCount === 1 ? 'paper' : 'papers'}` : '待补充论文'}
                     </span>
                     <h3 className="mt-7 text-3xl font-bold leading-none text-[#E1E0CC]">{topic.title}</h3>
                     <p className="mt-2 text-xs uppercase tracking-[0.22em] text-white/35">{topic.english}</p>
